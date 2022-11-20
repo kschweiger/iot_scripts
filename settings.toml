@@ -1,0 +1,8 @@
+[receiver]
+port=7770
+
+[enviro_monitor]
+init_read_time=10
+resolution=1
+batch_size_send=10
+temp_calib_factor=2.25
