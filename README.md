@@ -1,6 +1,6 @@
 # IOT scripts
 
-Collection of IoT scripts running together with the [data_receiver](#) API.
+Collection of IoT scripts running together with the [data_receiver](https://github.com/kschweiger/iot_receiver) Service.
 
 ## Enviro+ 
 
@@ -23,6 +23,6 @@ host="XXX.XXX.XXX.XXX"
 api_key="XXXXXX"
 ```
 
-
+Furthermore you should do some test to set the `temp_calib_factor` in the `setting.toml` file.
 
 

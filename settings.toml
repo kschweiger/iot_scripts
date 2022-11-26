@@ -2,7 +2,7 @@
 port=7770
 
 [enviro_monitor]
-init_read_time=10
+init_read_time=600
 resolution=1
-batch_size_send=10
-temp_calib_factor=2.25
+batch_size_send=20
+temp_calib_factor=1.9

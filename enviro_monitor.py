@@ -7,17 +7,16 @@ from random import random
 from subprocess import PIPE, Popen
 from time import sleep, time
 from typing import Dict
-import requests
 
+import requests
 # BME280 WEATHER SENSOR
 from bme280 import BME280
 from dynaconf import Dynaconf
-
 # MICS6814 ANALOG GAS SENSOR
 from enviroplus import gas
-
 # LTR-559 LIGHT AND PROXIMITY SENSOR
 from ltr559 import LTR559
+from requests.exceptions import ConnectionError
 
 logging.basicConfig(
     format="%(asctime)s %(funcName)-12s %(process)d %(levelname)-8s %(message)s",
@@ -94,9 +93,8 @@ def read_data(
         "Reading initial data pre saving - Duration: %s [sec]", initial_read_time
     )
     for i in range(initial_read_time // read_resolution):
-        data = read_all_environment_data(temp_calibration_factor, cpu_temps)
-        # logger.info(data)
-        sleep(read_resolution)
+        read_all_environment_data(temp_calibration_factor, cpu_temps)
+        sleep(1)
 
     keep_reading = True
 
@@ -146,7 +144,34 @@ def send_data(url: str, header: Dict[str, str], conn_data: Connection):
         if batch is None:
             break
         logger.debug(f"Got {batch}")
-        # TODO: implement sending the data via post request
+
+        batch_data = {
+            "timestamp": [],
+            "temperature": [],
+            "pressure": [],
+            "humidity": [],
+            "light": [],
+            "gas_ox": [],
+            "gas_red": [],
+            "gas_nh3": [],
+        }
+
+        for data in batch:
+            timestamp, temp, pres, hum, lux, gas_ox, gas_red, gas_nh3 = data
+            batch_data["timestamp"].append(timestamp.isoformat())
+            batch_data["temperature"].append(temp)
+            batch_data["pressure"].append(pres)
+            batch_data["humidity"].append(hum)
+            batch_data["light"].append(lux)
+            batch_data["gas_ox"].append(gas_ox)
+            batch_data["gas_red"].append(gas_red)
+            batch_data["gas_nh3"].append(gas_nh3)
+
+        response = requests.post(url, headers=header, json=batch_data)
+
+        if response.status_code != 200:
+            # TODO: Decide how to deal with failed requests
+            pass
 
     logger.info("Receiver: Done")
 
@@ -158,6 +183,21 @@ def main():
     settings = Dynaconf(
         settings_files=["settings.toml", ".secrets.toml"],
     )
+
+    try:
+        health_response = requests.get(
+            f"http://{settings.receiver.host}:{settings.receiver.port}/health"
+        )
+    except ConnectionError:
+        logger.error("Receiver not reachable")
+        exit()
+
+    if health_response.status_code != 200:
+        logger.error(
+            "Got error from receiver health check: %s", health_response.status_code
+        )
+        exit()
+
     data_receiver_url = (
         f"http://{settings.receiver.host}:{settings.receiver.port}/environment"
     )
